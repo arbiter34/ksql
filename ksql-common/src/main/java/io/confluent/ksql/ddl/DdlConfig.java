@@ -18,6 +18,7 @@ package io.confluent.ksql.ddl;
 
 public final class DdlConfig {
 
+  public static final String PROTOBUF_CLASS_PROPERTY = "PROTOBUF_CLASS";
   public static final String VALUE_FORMAT_PROPERTY = "VALUE_FORMAT";
   public static final String AVRO_SCHEMA_FILE = "AVROSCHEMAFILE";
   public static final String AVRO_SCHEMA = "AVROSCHEMA";

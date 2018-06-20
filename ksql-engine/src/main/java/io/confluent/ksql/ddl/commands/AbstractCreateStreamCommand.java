@@ -54,6 +54,7 @@ abstract class AbstractCreateStreamCommand implements DdlCommand {
       "HOPPING", WindowedSerdes.timeWindowedSerdeFrom(String.class)
   );
 
+  final String protobufClass;
   final String sqlExpression;
   final String sourceName;
   final String topicName;
@@ -106,6 +107,13 @@ abstract class AbstractCreateStreamCommand implements DdlCommand {
       }
     } else {
       this.keyColumnName = "";
+    }
+
+    protobufClass = "";
+    if (properties.containsKey(DdlConfig.PROTOBUF_CLASS_PROPERTY)) {
+      protobufClass = StringUtil.cleanQuotes(
+        properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY).toString()
+      );
     }
 
     final String timestampName = properties.containsKey(DdlConfig.TIMESTAMP_NAME_PROPERTY)
@@ -188,6 +196,7 @@ abstract class AbstractCreateStreamCommand implements DdlCommand {
   private void validateWithClause(final Set<String> withClauseVariables) {
 
     final Set<String> validSet = new HashSet<>();
+    validSet.add(DdlConfig.PROTOBUF_CLASS_PROPERTY.toUpperCase());
     validSet.add(DdlConfig.VALUE_FORMAT_PROPERTY.toUpperCase());
     validSet.add(DdlConfig.KAFKA_TOPIC_NAME_PROPERTY.toUpperCase());
     validSet.add(DdlConfig.KEY_NAME_PROPERTY.toUpperCase());
