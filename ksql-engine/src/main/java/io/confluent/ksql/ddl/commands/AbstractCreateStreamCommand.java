@@ -47,6 +47,7 @@ abstract class AbstractCreateStreamCommand implements DDLCommand {
   String topicName;
   Schema schema;
   String keyColumnName;
+  String protobufClass;
   String timestampColumnName;
   boolean isWindowed;
   RegisterTopicCommand registerTopicCommand;
@@ -95,6 +96,12 @@ abstract class AbstractCreateStreamCommand implements DDLCommand {
             keyColumnName
         ));
       }
+    }
+
+    protobufClass = "";
+    if (properties.containsKey(DdlConfig.PROTOBUF_CLASS_PROPERTY)) {
+      protobufClass = properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY).toString();
+      protobufClass = StringUtil.cleanQuotes(protobufClass);
     }
 
     this.timestampColumnName = "";
@@ -207,6 +214,7 @@ abstract class AbstractCreateStreamCommand implements DDLCommand {
     validSet.add(DdlConfig.STATE_STORE_NAME_PROPERTY.toUpperCase());
     validSet.add(DdlConfig.TOPIC_NAME_PROPERTY.toUpperCase());
     validSet.add(KsqlConstants.AVRO_SCHEMA_ID.toUpperCase());
+    validSet.add(DdlConfig.PROTOBUF_CLASS_PROPERTY.toUpperCase());
 
     for (String withVariable : withClauseVariables) {
       if (!validSet.contains(withVariable.toUpperCase())) {

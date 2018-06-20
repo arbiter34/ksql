@@ -25,6 +25,7 @@ import io.confluent.ksql.serde.KsqlTopicSerDe;
 import io.confluent.ksql.serde.avro.KsqlAvroTopicSerDe;
 import io.confluent.ksql.serde.delimited.KsqlDelimitedTopicSerDe;
 import io.confluent.ksql.serde.json.KsqlJsonTopicSerDe;
+import io.confluent.ksql.serde.protobuf.KsqlProtobufTopicSerDe;
 import io.confluent.ksql.util.KsqlException;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
@@ -108,6 +109,9 @@ public class MetastoreUtil {
       topicSerDe = new KsqlJsonTopicSerDe();
     } else if ("DELIMITED".equals(serde)) {
       topicSerDe = new KsqlDelimitedTopicSerDe();
+    } else if ("PROTOBUF".equals(serde)) {
+      final String protobufClass = node.get("protobufclass").asText();
+      topicSerDe = new KsqlProtobufTopicSerDe(protobufClass);
     } else {
       throw new KsqlException("Topic serde is not supported.");
     }
