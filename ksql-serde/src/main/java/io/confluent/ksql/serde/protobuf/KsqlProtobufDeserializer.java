@@ -50,12 +50,16 @@ public class KsqlProtobufDeserializer implements Deserializer<GenericRow> {
     final String classStr = (String) map.get(KsqlProtobufTopicSerDe.CONFIG_PROTOBUF_CLASS);
     try {
       protobufType = Class.forName(classStr);
-      parseFromMethod = protobufType.getMethod("parseFrom", byte[].class);
+    } catch (ClassNotFoundException e) {
+      logger.error("Caught exception (reflecting Protobuf class): {}", e.getMessage(), e);
+      throw new RuntimeException(String.format("Could not load Protobuf class %s - ensure that it is available in classpath", classStr));
+    }
 
-    } catch (ClassNotFoundException | NoSuchMethodException e) {
-      // TODO handle.
-      logger.error("Caught exception: {}", e.getMessage(), e);
-      throw new RuntimeException(e.getMessage(), e);
+    try {
+      parseFromMethod = protobufType.getMethod("parseFrom", byte[].class);
+    } catch (NoSuchMethodException e) {
+      logger.error("Caught exception (reflecting parseFrom): {}", e.getMessage(), e);
+      throw new RuntimeException(String.format("Could not find %s.parseFrom method - ensure that it is a generated Protobuf class", classStr));
     }
   }
 
