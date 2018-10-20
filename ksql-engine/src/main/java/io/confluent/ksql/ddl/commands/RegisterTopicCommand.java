@@ -72,8 +72,7 @@ public class RegisterTopicCommand implements DdlCommand {
         final Expression protobufClassProperty = properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY);
         final String protobufClass;
         if (protobufClassProperty == null) {
-          // TODO handle this properly...for now just put in a dummy value, exception will be raised.
-          protobufClass = "UNCONFIGURED";
+          throw new KsqlException(String.format("Protobuf class property %s not found in properties", DdlConfig.PROTOBUF_CLASS_PROPERTY));
         }
         else
         {
