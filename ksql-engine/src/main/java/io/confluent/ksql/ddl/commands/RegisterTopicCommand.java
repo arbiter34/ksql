@@ -70,14 +70,16 @@ public class RegisterTopicCommand implements DdlCommand {
       case DataSource.DELIMITED_SERDE_NAME:
         return new KsqlDelimitedTopicSerDe();
       case DataSource.PROTOBUF_NAME:
+        final Expression protobufClassProperty = properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY);
         final String protobufClass;
-        if (properties.containsKey(DdlConfig.PROTOBUF_CLASS_PROPERTY)) {
+        if (protobufClassProperty == null) {
+          throw new KsqlException(String.format("Protobuf class property %s not found in properties", DdlConfig.PROTOBUF_CLASS_PROPERTY));
+        }
+        else
+        {
           protobufClass = StringUtil.cleanQuotes(
             properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY).toString()
           );
-        } else {
-          // TODO handle this properly...for now just put in a dummy value, exception will be raised.
-          protobufClass = "UNCONFIGURED";
         }
         return new KsqlProtobufTopicSerDe(protobufClass);
       default:
