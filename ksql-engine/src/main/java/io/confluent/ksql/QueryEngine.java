@@ -30,6 +30,7 @@ import io.confluent.ksql.metastore.MetaStore;
 import io.confluent.ksql.metastore.StructuredDataSource;
 import io.confluent.ksql.parser.KsqlParser.PreparedStatement;
 import io.confluent.ksql.parser.SqlFormatter;
+import io.confluent.ksql.parser.protobuf.KsqlProtobufSchemaBuilder;
 import io.confluent.ksql.parser.tree.AbstractStreamCreateStatement;
 import io.confluent.ksql.parser.tree.DdlStatement;
 import io.confluent.ksql.parser.tree.Expression;
@@ -39,6 +40,7 @@ import io.confluent.ksql.parser.tree.SelectItem;
 import io.confluent.ksql.parser.tree.SingleColumn;
 import io.confluent.ksql.parser.tree.Statement;
 import io.confluent.ksql.parser.tree.StringLiteral;
+import io.confluent.ksql.parser.tree.TableElement;
 import io.confluent.ksql.physical.KafkaStreamsBuilderImpl;
 import io.confluent.ksql.physical.PhysicalPlanBuilder;
 import io.confluent.ksql.planner.LogicalPlanNode;
@@ -46,11 +48,14 @@ import io.confluent.ksql.planner.LogicalPlanner;
 import io.confluent.ksql.planner.plan.KsqlStructuredDataOutputNode;
 import io.confluent.ksql.planner.plan.PlanNode;
 import io.confluent.ksql.serde.DataSource.DataSourceType;
+import io.confluent.ksql.serde.protobuf.KsqlProtobufTopicSerDe;
 import io.confluent.ksql.util.KsqlConfig;
 import io.confluent.ksql.util.KsqlException;
 import io.confluent.ksql.util.QueryMetadata;
 import io.confluent.ksql.util.StatementWithSchema;
 import io.confluent.ksql.util.StringUtil;
+
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -243,8 +248,12 @@ class QueryEngine {
       final AbstractStreamCreateStatement streamCreateStatement =
           (AbstractStreamCreateStatement) statement;
 
-      final StatementWithSchema statementWithSchema
+      final StatementWithSchema statementWithSchemaTemp
           = maybeAddFieldsFromSchemaRegistry(streamCreateStatement, sqlExpression);
+
+      final StatementWithSchema statementWithSchema
+              = maybeAddFieldsFromProtobuf((AbstractStreamCreateStatement)statementWithSchemaTemp.getStatement(),
+              statementWithSchemaTemp.getStatementText());
 
       resultingStatement = (DdlStatement) statementWithSchema.getStatement();
       resultingSqlExpression = statementWithSchema.getStatementText();
@@ -282,6 +291,33 @@ class QueryEngine {
         ksqlTopic,
         Serdes.String()
     );
+  }
+
+  private StatementWithSchema maybeAddFieldsFromProtobuf(
+          final AbstractStreamCreateStatement streamCreateStatement,
+          final String statementText
+  ) {
+    if (streamCreateStatement.getProperties().containsKey(DdlConfig.PROTOBUF_CLASS_PROPERTY) &&
+        streamCreateStatement.getElements().isEmpty()) {
+        final KsqlProtobufSchemaBuilder builder = new KsqlProtobufSchemaBuilder(streamCreateStatement.getProperties());
+        final List<TableElement> elements = builder.buildSchema();
+
+        final AbstractStreamCreateStatement statementWithElements = streamCreateStatement.copyWith(
+            elements,
+            streamCreateStatement.getProperties()
+        );
+        return StatementWithSchema.forStatement(
+            statementWithElements,
+            SqlFormatter.formatSql(statementWithElements),
+            new HashMap<>(),
+            ksqlEngine.getSchemaRegistryClient()
+        );
+    }
+    return StatementWithSchema.forStatement(
+            streamCreateStatement,
+            statementText,
+            new HashMap<>(),
+            ksqlEngine.getSchemaRegistryClient());
   }
 
   private StatementWithSchema maybeAddFieldsFromSchemaRegistry(

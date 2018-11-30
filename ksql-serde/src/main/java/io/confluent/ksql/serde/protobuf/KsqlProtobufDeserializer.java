@@ -43,6 +43,7 @@ public class KsqlProtobufDeserializer implements Deserializer<GenericRow> {
     this.protobufTransformer = new ProtobufTransformer(schema);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void configure(final Map<String, ?> map, boolean b) {
     logger.info("Got properties: {}", map);
@@ -72,7 +73,7 @@ public class KsqlProtobufDeserializer implements Deserializer<GenericRow> {
     try {
       // Parse Protobuf from the bytes
       final MessageOrBuilder message
-        = (MessageOrBuilder) parseFromMethod.invoke(protobufType, bytes);
+        = (MessageOrBuilder) parseFromMethod.invoke(protobufType, (Object) bytes);
       return protobufTransformer.convert(message);
     } catch (Exception e) {
       throw new SerializationException(
