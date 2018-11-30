@@ -29,10 +29,17 @@
             <artifactId>kafka-schema-registry-client</artifactId>
         </dependency>
 
-	    <dependency>
-		    <groupId>io.confluent</groupId>
-		    <artifactId>kafka-connect-avro-converter</artifactId>
-		    <version>${confluent.version}</version>
+        <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java-util -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+
+	<dependency>
+		<groupId>io.confluent</groupId>
+		<artifactId>kafka-connect-avro-converter</artifactId>
+		<version>${confluent.version}</version>
         </dependency>
 
         <dependency>

@@ -100,11 +100,12 @@ abstract class AbstractCreateStreamCommand implements DdlCommand {
       }
     }
 
-    protobufClass = "";
     if (properties.containsKey(DdlConfig.PROTOBUF_CLASS_PROPERTY)) {
       protobufClass = StringUtil.cleanQuotes(
         properties.get(DdlConfig.PROTOBUF_CLASS_PROPERTY).toString()
       );
+    } else {
+      protobufClass = "";
     }
 
     final String timestampName = properties.containsKey(DdlConfig.TIMESTAMP_NAME_PROPERTY)

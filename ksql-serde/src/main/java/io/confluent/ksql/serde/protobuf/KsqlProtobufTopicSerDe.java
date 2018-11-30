@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class KsqlProtobufTopicSerDe extends KsqlTopicSerDe {
   private static final Logger logger = LoggerFactory.getLogger(KsqlProtobufTopicSerDe.class);
@@ -45,19 +46,19 @@ public class KsqlProtobufTopicSerDe extends KsqlTopicSerDe {
     this.protobufClass = protobufClass;
   }
 
-
   @Override
-  public Serde<GenericRow> getGenericRowSerde(Schema schema, KsqlConfig ksqlConfig,
+  public Serde<GenericRow> getGenericRowSerde(Schema schemaMaybeWithSource,
+                                              KsqlConfig ksqlConfig,
                                               boolean isInternal,
                                               SchemaRegistryClient schemaRegistryClient) {
     Map<String, Object> serdeProps = new HashMap<>();
     serdeProps.put("JsonPOJOClass", GenericRow.class);
     serdeProps.put(CONFIG_PROTOBUF_CLASS, protobufClass);
 
-    final Serializer<GenericRow> genericRowSerializer = new KsqlProtobufSerializer(schema);
+    final Serializer<GenericRow> genericRowSerializer = new KsqlProtobufSerializer(schemaMaybeWithSource);
     genericRowSerializer.configure(serdeProps, false);
 
-    final Deserializer<GenericRow> genericRowDeserializer = new KsqlProtobufDeserializer(schema, false);
+    final Deserializer<GenericRow> genericRowDeserializer = new KsqlProtobufDeserializer(schemaMaybeWithSource, false);
     genericRowDeserializer.configure(serdeProps, false);
 
     return Serdes.serdeFrom(genericRowSerializer, genericRowDeserializer);

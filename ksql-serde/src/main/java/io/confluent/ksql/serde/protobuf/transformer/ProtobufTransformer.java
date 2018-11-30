@@ -6,9 +6,13 @@ import com.google.protobuf.Internal;
 import com.google.protobuf.MapEntry;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import io.confluent.ksql.GenericRow;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,26 +54,25 @@ public class ProtobufTransformer {
     return new GenericRow(values);
   }
 
+  @SuppressWarnings("unchecked")
   private Object convertField(final Field field, final MessageOrBuilder protobuf) {
     // Get name of field
     final String name = field.name();
 
     // Find the field.
     // TODO cache this?
-    for (final Map.Entry<Descriptors.FieldDescriptor, Object> fieldEntry : protobuf.getAllFields().entrySet()) {
-      final Descriptors.FieldDescriptor fieldDescriptor = fieldEntry.getKey();
+    for (final Descriptors.FieldDescriptor fieldDescriptor : protobuf.getDescriptorForType().getFields()) {
       if (!fieldDescriptor.getName().equalsIgnoreCase(name)) {
         continue;
       }
 
       // Get the field's value.
-      final Object value = fieldEntry.getValue();
+      final Object value = protobuf.getField(fieldDescriptor);
 
       // Handle null case.
       if (value == null) {
         return null;
       }
-
       // If this field is an ENUM...
       if (fieldDescriptor.getType().name().equals("ENUM")) {
         // Determine if we should return the name (string) or ordinal value (number)
@@ -88,39 +91,58 @@ public class ProtobufTransformer {
             throw new RuntimeException("Type mismatch?");
         }
       }
+      return convertValue(field.schema(), value);
+    }
+    return null;
+  }
 
-      // Based on the type of the field..
-      switch (field.schema().type()) {
-        case INT8:
-        case INT16:
-        case INT32:
-        case INT64:
-        case FLOAT32:
-        case FLOAT64:
-        case BOOLEAN:
-        case STRING:
-        case ARRAY:
-          return value;
+  @SuppressWarnings("unchecked")
+  public Object convertValue(final Schema schema, final Object value) {
+    // Based on the type of the field..
+    switch (schema.type()) {
+      case INT8:
+      case INT16:
+        return value;
+      case INT32:
+      case INT64:
+        if (value instanceof Timestamp) {
+          return ((Timestamp) value).getSeconds();
+        }
+        return value;
+      case FLOAT32:
+      case FLOAT64:
+      case BOOLEAN:
+        return value;
+      case STRING:
+        if (value instanceof Timestamp) {
+          return Timestamps.toString((Timestamp)value);
+        }
+        return value;
+      case ARRAY:
+        final List values = (List)value;
+        final List newValues = new ArrayList<>();
 
-        case BYTES:
-          return ((ByteString)value).toByteArray();
+        for (final Object o : values) {
+          newValues.add(convertValue(schema.valueSchema(), o));
+        }
+        return newValues;
 
-        case MAP:
-          final Map mapValue = new HashMap<>();
-          for (final MapEntry<Object, Object> mapEntry: (Collection<MapEntry>) value) {
-             mapValue.put(mapEntry.getKey(), mapEntry.getValue());
-          }
-          return mapValue;
+      case BYTES:
+        return ((ByteString)value).toByteArray();
 
-        case STRUCT:
-          final List values = new ArrayList<>();
-          for (final Field subField : field.schema().fields()) {
-            values.add(
-              convertField(subField, (MessageOrBuilder) value)
-            );
-          }
-          return values;
-      }
+      case MAP:
+        final Map mapValue = new HashMap<>();
+        for (final MapEntry<Object, Object> mapEntry: (Collection<MapEntry>) value) {
+          mapValue.put(convertValue(schema.keySchema(), mapEntry.getKey()), convertValue(schema.valueSchema(), mapEntry.getValue()));
+        }
+        return mapValue;
+
+      case STRUCT:
+        final Struct struct = new Struct(schema);
+        for (final Field subField : schema.fields()) {
+          struct.put(subField.name(), convertField(subField, (MessageOrBuilder) value));
+        }
+        return struct;
     }
     return null;
   }
@@ -136,6 +158,7 @@ public class ProtobufTransformer {
     return builder.build();
   }
 
+  @SuppressWarnings("unchecked")
   private void buildField(final Field field, final Message.Builder builder, final Object value) {
     // Find matching field
     for (final Descriptors.FieldDescriptor fieldDescriptor: builder.getDescriptorForType().getFields()) {
