@@ -73,31 +73,32 @@ public class ProtobufTransformer {
       if (value == null) {
         return null;
       }
-      // If this field is an ENUM...
-      if (fieldDescriptor.getType().name().equals("ENUM")) {
-        // Determine if we should return the name (string) or ordinal value (number)
-        switch (field.schema().type()) {
-          case INT8:
-          case INT16:
-          case INT32:
-          case INT64:
-            return ((Internal.EnumLite) value).getNumber();
-
-          case STRING:
-            return ((Descriptors.GenericDescriptor) value).getName();
-
-          default:
-            // TODO - ERROR!
-            throw new RuntimeException("Type mismatch?");
-        }
-      }
-      return convertValue(field.schema(), value);
+      return convertValue(field.schema(), fieldDescriptor, value);
     }
     return null;
   }
 
   @SuppressWarnings("unchecked")
-  public Object convertValue(final Schema schema, final Object value) {
+  public Object convertValue(final Schema schema, final Descriptors.FieldDescriptor fieldDescriptor, final Object value) {
+    // If this field is an ENUM...
+    if (fieldDescriptor.getType().name().equals("ENUM")) {
+      // Determine if we should return the name (string) or ordinal value (number)
+      switch (schema.type()) {
+        case INT8:
+        case INT16:
+        case INT32:
+        case INT64:
+          return ((Internal.EnumLite) value).getNumber();
+
+        case STRING:
+          return ((Descriptors.GenericDescriptor) value).getName();
+
+        default:
+          // TODO - ERROR!
+          throw new RuntimeException("Type mismatch?");
+      }
+    }
+
     // Based on the type of the field..
     switch (schema.type()) {
       case INT8:
@@ -118,7 +119,7 @@ public class ProtobufTransformer {
         final List newValues = new ArrayList<>();
 
         for (final Object o : values) {
-          newValues.add(convertValue(schema.valueSchema(), o));
+          newValues.add(convertValue(schema.valueSchema(), fieldDescriptor, o));
         }
         return newValues;
 
@@ -128,7 +129,7 @@ public class ProtobufTransformer {
       case MAP:
         final Map mapValue = new HashMap<>();
         for (final MapEntry<Object, Object> mapEntry: (Collection<MapEntry>) value) {
-          mapValue.put(convertValue(schema.keySchema(), mapEntry.getKey()), convertValue(schema.valueSchema(), mapEntry.getValue()));
+          mapValue.put(convertValue(schema.keySchema(), fieldDescriptor, mapEntry.getKey()), convertValue(schema.valueSchema(), fieldDescriptor, mapEntry.getValue()));
         }
         return mapValue;
 
