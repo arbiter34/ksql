@@ -102,13 +102,8 @@ public class ProtobufTransformer {
     switch (schema.type()) {
       case INT8:
       case INT16:
-        return value;
       case INT32:
       case INT64:
-        if (value instanceof Timestamp) {
-          return ((Timestamp) value).getSeconds();
-        }
-        return value;
       case FLOAT32:
       case FLOAT64:
       case BOOLEAN:
