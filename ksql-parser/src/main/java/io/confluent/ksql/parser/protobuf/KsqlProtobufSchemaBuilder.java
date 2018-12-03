@@ -1,9 +1,7 @@
 package io.confluent.ksql.parser.protobuf;
 
-import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
-import com.google.protobuf.MessageOrBuilder;
 import io.confluent.ksql.ddl.DdlConfig;
 import io.confluent.ksql.parser.tree.Array;
 import io.confluent.ksql.parser.tree.Expression;
@@ -16,9 +14,9 @@ import io.confluent.ksql.util.Pair;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class KsqlProtobufSchemaBuilder {
@@ -45,14 +43,15 @@ public class KsqlProtobufSchemaBuilder {
     }
 
     private List<Pair<String, Type>> buildSchema(final Descriptors.Descriptor descriptor) {
-        final List<Pair<String, Type>> elements = new ArrayList<>();
-        for (final Descriptors.FieldDescriptor fieldDescriptor : descriptor.getFields()) {
-            elements.add(new Pair<>(fieldDescriptor.getName().toUpperCase(), getType(descriptor, fieldDescriptor)));
-        }
-        return elements;
+        return descriptor
+                .getFields()
+                .stream()
+                .map(fieldDescriptor -> new Pair<>(fieldDescriptor.getName().toUpperCase(), getType(fieldDescriptor)))
+                .filter(pair -> Objects.nonNull(pair.right))
+                .collect(Collectors.toList());
     }
 
-    private Type getType(final Descriptors.Descriptor descriptor, final Descriptors.FieldDescriptor fieldDescriptor) {
+    private Type getType(final Descriptors.FieldDescriptor fieldDescriptor) {
         if (fieldDescriptor.isRepeated()) {
             return new Array(_getType(fieldDescriptor));
         } else if (fieldDescriptor.isMapField()) {
@@ -69,17 +68,26 @@ public class KsqlProtobufSchemaBuilder {
                 return new PrimitiveType(Type.KsqlType.DOUBLE);
             case FIXED32:
             case INT32:
+            case UINT32:
+            case SFIXED32:
+            case SINT32:
                 return new PrimitiveType(Type.KsqlType.INTEGER);
             case FIXED64:
             case INT64:
+            case UINT64:
+            case SFIXED64:
+            case SINT64:
                 return new PrimitiveType(Type.KsqlType.BIGINT);
             case BOOL:
                 return new PrimitiveType(Type.KsqlType.BOOLEAN);
             case STRING:
             case ENUM:
                 return new PrimitiveType(Type.KsqlType.STRING);
+            case GROUP:
             case MESSAGE:
                 return new Struct(buildSchema(fieldDescriptor.getMessageType()));
+            case BYTES:
+                return null;
             default:
                 throw new IllegalStateException("Unable to parse field of type " + fieldDescriptor.getType());
         }
