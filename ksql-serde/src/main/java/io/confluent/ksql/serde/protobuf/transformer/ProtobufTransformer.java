@@ -198,7 +198,10 @@ public class ProtobufTransformer {
           case BOOLEAN:
           case STRING:
           case ARRAY:
-            builder.setField(fieldDescriptor, value);
+            final List<Object> values = (List) value;
+            for (Object o : values) {
+              builder.addRepeatedField(fieldDescriptor, o);
+            }
             return;
 
           case BYTES:
@@ -215,8 +218,7 @@ public class ProtobufTransformer {
 
             for (final Map.Entry entry : ((Map<Object, Object>)value).entrySet()) {
               builder.addRepeatedField(fieldDescriptor,
-                builder
-                  .newBuilderForField(fieldDescriptor)
+                mapBuilder
                   .setField(keyField, entry.getKey())
                   .setField(valueField, entry.getValue())
                   .build()
@@ -226,9 +228,9 @@ public class ProtobufTransformer {
 
           case STRUCT:
             final Message.Builder structBuilder = builder.newBuilderForField(fieldDescriptor);
-            final Iterator<Object> subValueIterator = ((Collection)value).iterator();
-            for (final Field subField : field.schema().fields()) {
-                buildField(subField, structBuilder, subValueIterator.next());
+            final Struct struct = (Struct) value;
+            for (final Field subField : struct.schema().fields()) {
+                buildField(subField, structBuilder, struct.get(subField));
             }
             builder.setField(fieldDescriptor, structBuilder.build());
             return;
