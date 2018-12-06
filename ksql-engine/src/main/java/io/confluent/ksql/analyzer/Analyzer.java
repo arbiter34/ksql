@@ -53,6 +53,7 @@ import io.confluent.ksql.serde.KsqlTopicSerDe;
 import io.confluent.ksql.serde.avro.KsqlAvroTopicSerDe;
 import io.confluent.ksql.serde.delimited.KsqlDelimitedTopicSerDe;
 import io.confluent.ksql.serde.json.KsqlJsonTopicSerDe;
+import io.confluent.ksql.serde.protobuf.KsqlProtobufTopicSerDe;
 import io.confluent.ksql.util.KsqlConfig;
 import io.confluent.ksql.util.KsqlConstants;
 import io.confluent.ksql.util.KsqlException;
@@ -159,6 +160,20 @@ public class Analyzer extends DefaultTraversalVisitor<Node, AnalysisContext> {
             break;
           case DataSource.DELIMITED_SERDE_NAME:
             intoTopicSerde = new KsqlDelimitedTopicSerDe();
+            break;
+          case DataSource.PROTOBUF_NAME:
+            final Object protobufClassProperty = analysis.getIntoProtobufClass();
+            final String protobufClass;
+            if (protobufClassProperty == null) {
+              throw new KsqlException(String.format("Protobuf class property %s not found in properties", DdlConfig.PROTOBUF_CLASS_PROPERTY));
+            }
+            else
+            {
+              protobufClass = StringUtil.cleanQuotes(
+                      protobufClassProperty.toString()
+              );
+            }
+            intoTopicSerde = new KsqlProtobufTopicSerDe(protobufClass);
             break;
           default:
             throw new KsqlException(
@@ -555,6 +570,10 @@ public class Analyzer extends DefaultTraversalVisitor<Node, AnalysisContext> {
       setIntoTopicName(node);
     }
 
+    if (node.getProperties().get(DdlConfig.PROTOBUF_CLASS_PROPERTY) != null) {
+      setIntoProtoClass(node);
+    }
+
     if (node.getProperties().get(DdlConfig.PARTITION_BY_PROPERTY) != null) {
       final String intoPartitionByColumnName = node.getProperties()
           .get(DdlConfig.PARTITION_BY_PROPERTY)
@@ -638,6 +657,16 @@ public class Analyzer extends DefaultTraversalVisitor<Node, AnalysisContext> {
     }
   }
 
+  private void setIntoProtoClass(final Table node) {
+    String intoProtobufClass =
+            node.getProperties().get(DdlConfig.PROTOBUF_CLASS_PROPERTY).toString();
+    if (intoProtobufClass.isEmpty()) {
+      throw new KsqlException("PROTOBUF_CLASS must be a non-empty, fully qualified class name.");
+    }
+    analysis.setIntoProtobufClass(intoProtobufClass);
+    analysis.getIntoProperties().put(DdlConfig.PROTOBUF_CLASS_PROPERTY, intoProtobufClass);
+  }
+
   private void setIntoTimestampColumnAndFormat(final Table node) {
     final Map<String, Expression> properties = node.getProperties();
     String intoTimestampColumnName = properties
@@ -674,6 +703,7 @@ public class Analyzer extends DefaultTraversalVisitor<Node, AnalysisContext> {
     validSet.add(KsqlConstants.SINK_NUMBER_OF_PARTITIONS.toUpperCase());
     validSet.add(KsqlConstants.SINK_NUMBER_OF_REPLICAS.toUpperCase());
     validSet.add(DdlConfig.TIMESTAMP_FORMAT_PROPERTY.toUpperCase());
+    validSet.add(DdlConfig.PROTOBUF_CLASS_PROPERTY.toUpperCase());
 
     for (final String withVariable : withClauseVariables) {
       if (!validSet.contains(withVariable.toUpperCase())) {

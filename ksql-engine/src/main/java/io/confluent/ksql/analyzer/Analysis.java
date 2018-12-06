@@ -32,6 +32,7 @@ public class Analysis {
   private StructuredDataSource into;
   private Map<String, Object> intoProperties = new HashMap<>();
   private String intoFormat = null;
+  private String intoProtobufClass;
   private boolean doCreateInto;
   // TODO: Maybe have all as properties. At the moment this will only be set if format is avro.
   private String intoKafkaTopicName = null;
@@ -108,9 +109,13 @@ public class Analysis {
     return intoFormat;
   }
 
+  public void setIntoProtobufClass(final String intoProtobufClass) { this.intoProtobufClass = intoProtobufClass; }
+
   public String getIntoKafkaTopicName() {
     return intoKafkaTopicName;
   }
+
+  public String getIntoProtobufClass() { return intoProtobufClass; }
 
   public List<Expression> getGroupByExpressions() {
     return groupByExpressions;
