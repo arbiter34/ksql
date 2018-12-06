@@ -197,6 +197,8 @@ public class ProtobufTransformer {
           case FLOAT64:
           case BOOLEAN:
           case STRING:
+            builder.setField(fieldDescriptor, value);
+            return;
           case ARRAY:
             final List<Object> values = (List) value;
             for (Object o : values) {
