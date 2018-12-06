@@ -82,7 +82,9 @@ public class ProtobufTransformer {
   @SuppressWarnings("unchecked")
   public Object convertValue(final Schema schema, final Descriptors.FieldDescriptor fieldDescriptor, final Object value) {
     // If this field is an ENUM...
-    if (fieldDescriptor.getType().name().equals("ENUM")) {
+    if (schema.type() != Schema.Type.ARRAY &&
+        schema.type() != Schema.Type.MAP &&
+        fieldDescriptor.getType().name().equals("ENUM")) {
       // Determine if we should return the name (string) or ordinal value (number)
       switch (schema.type()) {
         case INT8:
@@ -164,7 +166,9 @@ public class ProtobufTransformer {
   @SuppressWarnings("unchecked")
   private Object getValue(final Message.Builder builder, final Descriptors.FieldDescriptor fieldDescriptor, final Schema schema, final Object value) {
     // If this field is an ENUM...
-    if (fieldDescriptor.getType().name().equals("ENUM")) {
+    if (schema.type() != Schema.Type.ARRAY &&
+        schema.type() != Schema.Type.MAP &&
+        fieldDescriptor.getType().name().equals("ENUM")) {
       // Determine if we should return the name (string) or ordinal value (number)
       switch (schema.type()) {
         case INT8:
